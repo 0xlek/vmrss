@@ -18,22 +18,19 @@ function print_vmrss() {
         pid=${arr[${#arr[@]}-1]}
         unset arr[${#arr[@]}-1]
 
-        [ -d "/proc/$pid" ] || continue
+        # check if process exists
+        ps -p $pid > /dev/null 2>&1 || continue
 
-        GREP_OPTS=${GREP_OPTS:-"
-          --color=auto
-          --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox}
-          "}
-        mem=$(grep $GREP_OPTS VmRSS /proc/$pid/status \
-          | grep $GREP_OPTS -o '[0-9]\+' \
-          | awk '{print $1/1024}')
-        #Add decimals to total
-        total=$(echo $mem+$total | bc)
+        # get memory usage in MB
+        mem=$(ps -p $pid -o rss= | awk '{print $1/1024}')
+
+        # Add decimals to total
+        total=$(echo "$mem+$total" | bc)
 
         # name of process
         name=$(ps -p $pid -o comm=)
 
-        printf "%${space}s%s($pid): $mem MB\n" '' "$name"
+        printf "%${space}s%s($pid): %.2f MB\n" '' "$name" "$mem"
 
         # get children
         children=$(pgrep -P $pid)
@@ -43,7 +40,7 @@ function print_vmrss() {
             arr+=("$child" $((space+2)))
         done
     done
-    printf "Total: $total MB\n"
+    printf "Total: %.2f MB\n" "$total"
 }
 
 # check VMRSS_MONITOR = 1
